@@ -89,6 +89,8 @@ export interface SketchCanvasProps {
 
 export class SketchCanvas extends React.Component<SketchCanvasProps & ViewProperties> {
   clear(): void
+  setScalingProps(): void
+  onPinchStart(): void
   undo(): number
   addPath(data: Path): void
   deletePath(id: number): void
@@ -156,16 +158,17 @@ export interface RNSketchCanvasProps {
   text?: CanvasText[]
   /**
    * {
-   *    path: string, 
-   *    directory: string, 
+   *    path: string,
+   *    directory: string,
    *    mode: 'AspectFill' | 'AspectFit' | 'ScaleToFill'
    * }
    */
   localSourceImage?: LocalSourceImage
 }
 
-export default class RNSketchCanvas extends React.Component<RNSketchCanvasProps & ViewProperties> {
+export default class ReactNativeSketchCanvas extends React.Component<RNSketchCanvasProps & ViewProperties> {
   clear(): void
+  setScalingProps(): void
   undo(): number
   addPath(data: Path): void
   deletePath(id: number): void
