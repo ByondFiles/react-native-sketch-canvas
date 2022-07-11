@@ -36,18 +36,18 @@ class SketchCanvas extends React.Component {
     touchEnabled: PropTypes.bool,
     onPinchStart: PropTypes.func,
     text: PropTypes.arrayOf(
-        PropTypes.shape({
-          text: PropTypes.string,
-          font: PropTypes.string,
-          fontSize: PropTypes.number,
-          fontColor: PropTypes.string,
-          overlay: PropTypes.oneOf(['TextOnSketch', 'SketchOnText']),
-          anchor: PropTypes.shape({x: PropTypes.number, y: PropTypes.number}),
-          position: PropTypes.shape({x: PropTypes.number, y: PropTypes.number}),
-          coordinate: PropTypes.oneOf(['Absolute', 'Ratio']),
-          alignment: PropTypes.oneOf(['Left', 'Center', 'Right']),
-          lineHeightMultiple: PropTypes.number,
-        }),
+      PropTypes.shape({
+        text: PropTypes.string,
+        font: PropTypes.string,
+        fontSize: PropTypes.number,
+        fontColor: PropTypes.string,
+        overlay: PropTypes.oneOf(['TextOnSketch', 'SketchOnText']),
+        anchor: PropTypes.shape({x: PropTypes.number, y: PropTypes.number}),
+        position: PropTypes.shape({x: PropTypes.number, y: PropTypes.number}),
+        coordinate: PropTypes.oneOf(['Absolute', 'Ratio']),
+        alignment: PropTypes.oneOf(['Left', 'Center', 'Right']),
+        lineHeightMultiple: PropTypes.number,
+      }),
     ),
     localSourceImage: PropTypes.shape({
       filename: PropTypes.string,
@@ -97,14 +97,16 @@ class SketchCanvas extends React.Component {
     this._initialized = false;
 
     this.state.text = this._processText(
-        props.text ? props.text.map(t => Object.assign({}, t)) : null,
+      props.text ? props.text.map(t => Object.assign({}, t)) : null,
     );
+
+    this.state.pinching = false;
   }
 
   componentWillReceiveProps(nextProps) {
     this.setState({
       text: this._processText(
-          nextProps.text ? nextProps.text.map(t => Object.assign({}, t)) : null,
+        nextProps.text ? nextProps.text.map(t => Object.assign({}, t)) : null,
       ),
     });
   }
@@ -118,16 +120,16 @@ class SketchCanvas extends React.Component {
     this._paths = [];
     this._path = null;
     UIManager.dispatchViewManagerCommand(
-        this._handle,
-        UIManager.RNSketchCanvas.Commands.clear,
-        [],
+      this._handle,
+      UIManager.RNSketchCanvas.Commands.clear,
+      [],
     );
   }
 
   undo() {
     let lastId = -1;
     this._paths.forEach(
-        d => (lastId = d.drawer === this.props.user ? d.path.id : lastId),
+      d => (lastId = d.drawer === this.props.user ? d.path.id : lastId),
     );
     if (lastId >= 0) {
       this.deletePath(lastId);
@@ -144,20 +146,20 @@ class SketchCanvas extends React.Component {
         const coor = p.split(',').map(pp => parseFloat(pp).toFixed(2));
 
         return `${
-            (coor[0] * this._screenScale * this._size.width) / data.size.width
+          (coor[0] * this._screenScale * this._size.width) / data.size.width
         },${
-            (coor[1] * this._screenScale * this._size.height) / data.size.height
+          (coor[1] * this._screenScale * this._size.height) / data.size.height
         }`;
       });
       UIManager.dispatchViewManagerCommand(
-          this._handle,
-          UIManager.RNSketchCanvas.Commands.addPath,
-          [
-            data.path.id,
-            processColor(data.path.color),
-            data.path.width * this._screenScale,
-            pathData,
-          ],
+        this._handle,
+        UIManager.RNSketchCanvas.Commands.addPath,
+        [
+          data.path.id,
+          processColor(data.path.color),
+          data.path.width * this._screenScale,
+          pathData,
+        ],
       );
     } else {
       this._pathsToProcess.filter(p => p.path.id === data.path.id).length ===
@@ -168,33 +170,33 @@ class SketchCanvas extends React.Component {
   deletePath(id) {
     this._paths = this._paths.filter(p => p.path.id !== id);
     UIManager.dispatchViewManagerCommand(
-        this._handle,
-        UIManager.RNSketchCanvas.Commands.deletePath,
-        [id],
+      this._handle,
+      UIManager.RNSketchCanvas.Commands.deletePath,
+      [id],
     );
   }
 
   save(
-      imageType,
-      transparent,
-      folder,
-      filename,
-      includeImage,
-      includeText,
-      cropToImageSize,
+    imageType,
+    transparent,
+    folder,
+    filename,
+    includeImage,
+    includeText,
+    cropToImageSize,
   ) {
     UIManager.dispatchViewManagerCommand(
-        this._handle,
-        UIManager.RNSketchCanvas.Commands.save,
-        [
-          imageType,
-          folder,
-          filename,
-          transparent,
-          includeImage,
-          includeText,
-          cropToImageSize,
-        ],
+      this._handle,
+      UIManager.RNSketchCanvas.Commands.save,
+      [
+        imageType,
+        folder,
+        filename,
+        transparent,
+        includeImage,
+        includeText,
+        cropToImageSize,
+      ],
     );
   }
 
@@ -203,32 +205,32 @@ class SketchCanvas extends React.Component {
   }
 
   getBase64(
-      imageType,
-      transparent,
-      includeImage,
-      includeText,
-      cropToImageSize,
-      callback,
+    imageType,
+    transparent,
+    includeImage,
+    includeText,
+    cropToImageSize,
+    callback,
   ) {
     if (Platform.OS === 'ios') {
       SketchCanvasManager.transferToBase64(
-          this._handle,
-          imageType,
-          transparent,
-          includeImage,
-          includeText,
-          cropToImageSize,
-          callback,
+        this._handle,
+        imageType,
+        transparent,
+        includeImage,
+        includeText,
+        cropToImageSize,
+        callback,
       );
     } else {
       NativeModules.SketchCanvasModule.transferToBase64(
-          this._handle,
-          imageType,
-          transparent,
-          includeImage,
-          includeText,
-          cropToImageSize,
-          callback,
+        this._handle,
+        imageType,
+        transparent,
+        includeImage,
+        includeText,
+        cropToImageSize,
+        callback,
       );
     }
   }
@@ -236,7 +238,7 @@ class SketchCanvas extends React.Component {
   componentWillMount() {
     this.panResponder = PanResponder.create({
       // Ask to be the responder:
-      onStartShouldSetPanResponder: (evt, gestureState) => {
+      onStartShouldSetPanResponder: (evt, gesture) => {
         const amountOfTouches = evt.nativeEvent.touches.length;
 
         if (amountOfTouches === 2) {
@@ -247,7 +249,9 @@ class SketchCanvas extends React.Component {
         }
         return true;
       },
-      onStartShouldSetPanResponderCapture: (evt, gestureState) => false,
+      onStartShouldSetPanResponderCapture: (evt, gestureState) => {
+        return false;
+      },
       onMoveShouldSetPanResponder: (evt, gestureState) => false,
       onMoveShouldSetPanResponderCapture: (evt, gestureState) => false,
 
@@ -265,13 +269,13 @@ class SketchCanvas extends React.Component {
         };
 
         UIManager.dispatchViewManagerCommand(
-            this._handle,
-            UIManager.RNSketchCanvas.Commands.newPath,
-            [
-              this._path.id,
-              processColor(this._path.color),
-              this._path.width * this._screenScale,
-            ],
+          this._handle,
+          UIManager.RNSketchCanvas.Commands.newPath,
+          [
+            this._path.id,
+            processColor(this._path.color),
+            this._path.width * this._screenScale,
+          ],
         );
 
         // UIManager.dispatchViewManagerCommand(
@@ -287,7 +291,7 @@ class SketchCanvas extends React.Component {
         //   ],
         // );
         const x = parseFloat((gestureState.x0 - this._offset.x).toFixed(2)),
-            y = parseFloat((gestureState.y0 - this._offset.y).toFixed(2));
+          y = parseFloat((gestureState.y0 - this._offset.y).toFixed(2));
         this._path.data.push(`${x},${y}`);
         this.props.onStrokeStart(x, y);
       },
@@ -299,30 +303,48 @@ class SketchCanvas extends React.Component {
 
         const e = evt.nativeEvent;
 
+        if (e.touches.length === 2) {
+
+          this.setState({
+            pinching: true,
+          });
+          return this.props.onPinchStart();
+        } else {
+          if (this.state.pinching) {
+            this.setState({
+              pinching: false,
+            });
+          }
+        }
+
+        if (this.state.pinching) {
+          return;
+        }
+
         this._offset = {x: e.pageX - e.locationX, y: e.pageY - e.locationY};
 
         if (this._path) {
           const pointX = parseFloat(
-              (gestureState.moveX - this._offset.x).toFixed(2) *
-              this._screenScale,
+            (gestureState.moveX - this._offset.x).toFixed(2) *
+            this._screenScale,
           );
 
           const pointY = parseFloat(
-              (gestureState.moveY - this._offset.y).toFixed(2) *
-              this._screenScale,
+            (gestureState.moveY - this._offset.y).toFixed(2) *
+            this._screenScale,
           );
 
           UIManager.dispatchViewManagerCommand(
-              this._handle,
-              UIManager.RNSketchCanvas.Commands.addPoint,
-              [pointX, pointY],
+            this._handle,
+            UIManager.RNSketchCanvas.Commands.addPoint,
+            [pointX, pointY],
           );
 
           //part that saves the path (to display after saving sketch
           const x = parseFloat(
-                  (gestureState.moveX - this._offset.x).toFixed(2),
-              ),
-              y = parseFloat((gestureState.moveY - this._offset.y).toFixed(2));
+              (gestureState.moveX - this._offset.x).toFixed(2),
+            ),
+            y = parseFloat((gestureState.moveY - this._offset.y).toFixed(2));
 
           this._path.data.push(`${x},${y}`);
           this.props.onStrokeChanged(x, y);
@@ -345,9 +367,9 @@ class SketchCanvas extends React.Component {
           });
         }
         UIManager.dispatchViewManagerCommand(
-            this._handle,
-            UIManager.RNSketchCanvas.Commands.endPath,
-            [],
+          this._handle,
+          UIManager.RNSketchCanvas.Commands.endPath,
+          [],
         );
       },
 
@@ -359,64 +381,64 @@ class SketchCanvas extends React.Component {
 
   async componentDidMount() {
     const isStoragePermissionAuthorized = await requestPermissions(
-        this.props.permissionDialogTitle,
-        this.props.permissionDialogMessage,
+      this.props.permissionDialogTitle,
+      this.props.permissionDialogMessage,
     );
   }
 
   render() {
     return (
-        <RNSketchCanvas
-            ref={ref => {
-              this._handle = ReactNative.findNodeHandle(ref);
-            }}
-            style={this.props.style}
-            onLayout={e => {
-              this._size = {
-                width: e.nativeEvent.layout.width,
-                height: e.nativeEvent.layout.height,
-              };
-              this._initialized = true;
-              this._pathsToProcess.length > 0 &&
-              this._pathsToProcess.forEach(p => this.addPath(p));
-            }}
-            {...this.panResponder.panHandlers}
-            onChange={e => {
-              if (e.nativeEvent.hasOwnProperty('pathsUpdate')) {
-                this.props.onPathsChange(e.nativeEvent.pathsUpdate);
-              } else if (
-                  e.nativeEvent.hasOwnProperty('success') &&
-                  e.nativeEvent.hasOwnProperty('path')
-              ) {
-                this.props.onSketchSaved(e.nativeEvent.success, e.nativeEvent.path);
-              } else if (e.nativeEvent.hasOwnProperty('success')) {
-                this.props.onSketchSaved(e.nativeEvent.success);
-              }
-            }}
-            localSourceImage={this.props.localSourceImage}
-            permissionDialogTitle={this.props.permissionDialogTitle}
-            permissionDialogMessage={this.props.permissionDialogMessage}
-            text={this.state.text}
-        />
+      <RNSketchCanvas
+        ref={ref => {
+          this._handle = ReactNative.findNodeHandle(ref);
+        }}
+        style={this.props.style}
+        onLayout={e => {
+          this._size = {
+            width: e.nativeEvent.layout.width,
+            height: e.nativeEvent.layout.height,
+          };
+          this._initialized = true;
+          this._pathsToProcess.length > 0 &&
+          this._pathsToProcess.forEach(p => this.addPath(p));
+        }}
+        {...this.panResponder.panHandlers}
+        onChange={e => {
+          if (e.nativeEvent.hasOwnProperty('pathsUpdate')) {
+            this.props.onPathsChange(e.nativeEvent.pathsUpdate);
+          } else if (
+            e.nativeEvent.hasOwnProperty('success') &&
+            e.nativeEvent.hasOwnProperty('path')
+          ) {
+            this.props.onSketchSaved(e.nativeEvent.success, e.nativeEvent.path);
+          } else if (e.nativeEvent.hasOwnProperty('success')) {
+            this.props.onSketchSaved(e.nativeEvent.success);
+          }
+        }}
+        localSourceImage={this.props.localSourceImage}
+        permissionDialogTitle={this.props.permissionDialogTitle}
+        permissionDialogMessage={this.props.permissionDialogMessage}
+        text={this.state.text}
+      />
     );
   }
 }
 
 SketchCanvas.MAIN_BUNDLE =
-    Platform.OS === 'ios'
-        ? UIManager.RNSketchCanvas.Constants.MainBundlePath
-        : '';
+  Platform.OS === 'ios'
+    ? UIManager.RNSketchCanvas.Constants.MainBundlePath
+    : '';
 SketchCanvas.DOCUMENT =
-    Platform.OS === 'ios'
-        ? UIManager.RNSketchCanvas.Constants.NSDocumentDirectory
-        : '';
+  Platform.OS === 'ios'
+    ? UIManager.RNSketchCanvas.Constants.NSDocumentDirectory
+    : '';
 SketchCanvas.LIBRARY =
-    Platform.OS === 'ios'
-        ? UIManager.RNSketchCanvas.Constants.NSLibraryDirectory
-        : '';
+  Platform.OS === 'ios'
+    ? UIManager.RNSketchCanvas.Constants.NSLibraryDirectory
+    : '';
 SketchCanvas.CACHES =
-    Platform.OS === 'ios'
-        ? UIManager.RNSketchCanvas.Constants.NSCachesDirectory
-        : '';
+  Platform.OS === 'ios'
+    ? UIManager.RNSketchCanvas.Constants.NSCachesDirectory
+    : '';
 
 module.exports = SketchCanvas;
