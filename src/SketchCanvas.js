@@ -99,8 +99,6 @@ class SketchCanvas extends React.Component {
     this.state.text = this._processText(
       props.text ? props.text.map(t => Object.assign({}, t)) : null,
     );
-
-    this.state.pinching = false;
   }
 
   componentWillReceiveProps(nextProps) {
@@ -304,21 +302,7 @@ class SketchCanvas extends React.Component {
         const e = evt.nativeEvent;
 
         if (e.touches.length === 2) {
-
-          this.setState({
-            pinching: true,
-          });
           return this.props.onPinchStart();
-        } else {
-          if (this.state.pinching) {
-            this.setState({
-              pinching: false,
-            });
-          }
-        }
-
-        if (this.state.pinching) {
-          return;
         }
 
         this._offset = {x: e.pageX - e.locationX, y: e.pageY - e.locationY};
