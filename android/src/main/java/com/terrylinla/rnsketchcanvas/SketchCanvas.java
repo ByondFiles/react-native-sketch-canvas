@@ -48,6 +48,7 @@ public class SketchCanvas extends View {
     private Canvas mDrawingCanvas = null, mTranslucentDrawingCanvas = null;
 
     private boolean mNeedsFullRedraw = true;
+    private boolean mBackgroundDrawn = false;
 
     private int mOriginalWidth, mOriginalHeight;
     private Bitmap mBackgroundImage;
@@ -332,12 +333,22 @@ public class SketchCanvas extends View {
         }
     }
 
+    private void drawBackgroundImage(){
+        Rect dstRect = new Rect();
+        mDrawingCanvas.getClipBounds(dstRect);
+        mDrawingCanvas.drawBitmap(mBackgroundImage, null,
+                Utility.fillImage(mBackgroundImage.getWidth(), mBackgroundImage.getHeight(), dstRect.width(), dstRect.height(), mContentMode),
+                null);
+        mBackgroundDrawn = true;
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
         if (mNeedsFullRedraw && mDrawingCanvas != null) {
             mDrawingCanvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.MULTIPLY);
+            drawBackgroundImage();
             for(SketchData path: mPaths) {
                 path.draw(mDrawingCanvas);
             }
@@ -345,11 +356,7 @@ public class SketchCanvas extends View {
         }
 
         if (mBackgroundImage != null) {
-            Rect dstRect = new Rect();
-            canvas.getClipBounds(dstRect);
-            canvas.drawBitmap(mBackgroundImage, null, 
-                Utility.fillImage(mBackgroundImage.getWidth(), mBackgroundImage.getHeight(), dstRect.width(), dstRect.height(), mContentMode), 
-                null);
+            drawBackgroundImage();
         }
 
         for(CanvasText text: mArrSketchOnText) {
