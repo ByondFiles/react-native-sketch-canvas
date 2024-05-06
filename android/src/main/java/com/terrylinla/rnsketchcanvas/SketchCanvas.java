@@ -355,7 +355,7 @@ public class SketchCanvas extends View {
             mNeedsFullRedraw = false;
         }
 
-        if (mBackgroundImage != null) {
+        if (mBackgroundImage != null && !mBackgroundDrawn) {
             drawBackgroundImage();
         }
 
