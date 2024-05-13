@@ -46,6 +46,24 @@
     _frozenImage = nil;
 }
 
+- (void)drawBackgroundImage:(CGContextRef)context bounds:(CGRect)bounds {
+    if (_backgroundImage) {
+        if (!context) {
+            return;
+        }
+        CGContextSetBlendMode(context, kCGBlendModeNormal);
+        CGContextSaveGState(context);
+        CGContextScaleCTM(context, 1.0, -1.0);
+        CGContextTranslateCTM(context, 0, -bounds.size.height);
+        NSLog(@"Drawing background image on _drawingContext");
+        if (!_backgroundImageScaled) {
+            _backgroundImageScaled = [self scaleImage:_backgroundImage toSize:bounds.size contentMode:_backgroundImageContentMode];
+        }
+        CGContextDrawImage(context, bounds, _backgroundImageScaled.CGImage);
+        CGContextRestoreGState(context);
+    }
+}
+
 - (void)drawRect:(CGRect)rect {
     CGContextRef context = UIGraphicsGetCurrentContext();
 
@@ -54,6 +72,7 @@
     if (_needsFullRedraw) {
         [self setFrozenImageNeedsUpdate];
         CGContextClearRect(_drawingContext, bounds);
+        [self drawBackgroundImage:_drawingContext bounds:bounds];
         for (RNSketchData *path in _paths) {
             [path drawInContext:_drawingContext];
         }
@@ -68,13 +87,13 @@
         _translucentFrozenImage = CGBitmapContextCreateImage(_translucentDrawingContext);
     }
 
-    if (_backgroundImage) {
+    /*if (_backgroundImage) {
         if (!_backgroundImageScaled) {
             _backgroundImageScaled = [self scaleImage:_backgroundImage toSize:bounds.size contentMode: _backgroundImageContentMode];
         }
 
         [_backgroundImageScaled drawInRect:bounds];
-    }
+    }*/
 
     for (CanvasText *text in _arrSketchOnText) {
         [text.text drawInRect: text.drawRect withAttributes: text.attribute];
