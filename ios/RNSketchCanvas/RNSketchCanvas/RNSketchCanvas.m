@@ -174,6 +174,7 @@
             _backgroundImage = image;
             _backgroundImageScaled = nil;
             _backgroundImageContentMode = mode;
+            _needsFullRedraw = YES;
             [self setNeedsDisplay];
 
             return YES;
