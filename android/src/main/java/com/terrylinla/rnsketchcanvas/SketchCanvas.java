@@ -334,12 +334,14 @@ public class SketchCanvas extends View {
     }
 
     private void drawBackgroundImage(){
-        Rect dstRect = new Rect();
-        mDrawingCanvas.getClipBounds(dstRect);
-        mDrawingCanvas.drawBitmap(mBackgroundImage, null,
-                Utility.fillImage(mBackgroundImage.getWidth(), mBackgroundImage.getHeight(), dstRect.width(), dstRect.height(), mContentMode),
-                null);
-        mBackgroundDrawn = true;
+        if (mBackgroundImage != null) {
+            Rect dstRect = new Rect();
+            mDrawingCanvas.getClipBounds(dstRect);
+            mDrawingCanvas.drawBitmap(mBackgroundImage, null,
+                    Utility.fillImage(mBackgroundImage.getWidth(), mBackgroundImage.getHeight(), dstRect.width(), dstRect.height(), mContentMode),
+                    null);
+            mBackgroundDrawn = true;
+        }
     }
 
     @Override
