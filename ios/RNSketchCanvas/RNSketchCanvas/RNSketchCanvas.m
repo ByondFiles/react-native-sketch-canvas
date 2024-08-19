@@ -42,8 +42,20 @@
 - (void)dealloc {
     CGContextRelease(_drawingContext);
     _drawingContext = nil;
+    CGContextRelease(_translucentDrawingContext);
+    _translucentDrawingContext = nil;
     CGImageRelease(_frozenImage);
     _frozenImage = nil;
+    CGImageRelease(_translucentFrozenImage);
+    _translucentFrozenImage = nil;
+    _backgroundImage = nil;
+    _backgroundImageScaled = nil;
+
+    _arrTextOnSketch = nil;
+    _arrSketchOnText = nil;
+    _paths = nil;
+    _currentPath = nil;
+    _eventDispatcher = nil;
 }
 
 - (void)drawBackgroundImage:(CGContextRef)context bounds:(CGRect)bounds {
@@ -74,7 +86,9 @@
         CGContextClearRect(_drawingContext, bounds);
         [self drawBackgroundImage:_drawingContext bounds:bounds];
         for (RNSketchData *path in _paths) {
-            [path drawInContext:_drawingContext];
+            @autoreleasepool {
+                [path drawInContext:_drawingContext];
+            }
         }
         _needsFullRedraw = NO;
     }
@@ -96,7 +110,9 @@
     }*/
 
     for (CanvasText *text in _arrSketchOnText) {
-        [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+        @autoreleasepool {
+            [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+        }
     }
     
     if (_frozenImage) {
@@ -108,7 +124,9 @@
     }
     
     for (CanvasText *text in _arrTextOnSketch) {
-        [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+        @autoreleasepool {
+            [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+        }
     }
 }
 
@@ -119,19 +137,23 @@
         _lastSize = self.bounds.size;
         CGContextRelease(_drawingContext);
         _drawingContext = nil;
+        CGContextRelease(_translucentDrawingContext);
+        _translucentDrawingContext = nil;
         [self createDrawingContext];
         _needsFullRedraw = YES;
         _backgroundImageScaled = nil;
         
         for (CanvasText *text in [_arrTextOnSketch arrayByAddingObjectsFromArray: _arrSketchOnText]) {
-            CGPoint position = text.position;
-            if (!text.isAbsoluteCoordinate) {
-                position.x *= self.bounds.size.width;
-                position.y *= self.bounds.size.height;
+            @autoreleasepool {
+                CGPoint position = text.position;
+                if (!text.isAbsoluteCoordinate) {
+                    position.x *= self.bounds.size.width;
+                    position.y *= self.bounds.size.height;
+                }
+                position.x -= text.drawRect.size.width * text.anchor.x;
+                position.y -= text.drawRect.size.height * text.anchor.y;
+                text.drawRect = CGRectMake(position.x, position.y, text.drawRect.size.width, text.drawRect.size.height);
             }
-            position.x -= text.drawRect.size.width * text.anchor.x;
-            position.y -= text.drawRect.size.height * text.anchor.y;
-            text.drawRect = CGRectMake(position.x, position.y, text.drawRect.size.width, text.drawRect.size.height);
         }
         
         [self setNeedsDisplay];
@@ -160,27 +182,32 @@
 }
 
 - (BOOL)openSketchFile:(NSString *)filename directory:(NSString*) directory contentMode:(NSString*)mode {
+    bool succes = NO;
     if (filename) {
-        UIImage *image = [UIImage imageWithContentsOfFile: [directory stringByAppendingPathComponent: filename]];
-        image = image ? image : [UIImage imageNamed: filename];
-        if(image) {
-            if (image.imageOrientation != UIImageOrientationUp) {
-                UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
-                [image drawInRect:(CGRect){0, 0, image.size}];
-                UIImage *normalizedImage = UIGraphicsGetImageFromCurrentImageContext();
-                UIGraphicsEndImageContext();
-                image = normalizedImage;
+        @autoreleasepool {
+            UIImage *image = [UIImage imageWithContentsOfFile: [directory stringByAppendingPathComponent: filename]];
+            image = image ? image : [UIImage imageNamed: filename];
+            if(image) {
+                if (image.imageOrientation != UIImageOrientationUp) {
+                    UIGraphicsBeginImageContextWithOptions(image.size, NO, image.scale);
+                    [image drawInRect:(CGRect){0, 0, image.size}];
+                    UIImage *normalizedImage = UIGraphicsGetImageFromCurrentImageContext();
+                    UIGraphicsEndImageContext();
+                    image = normalizedImage;
+                    normalizedImage = nil;
+                }
+                _backgroundImage = image;
+                _backgroundImageScaled = nil;
+                _backgroundImageContentMode = mode;
+                _needsFullRedraw = YES;
+                image = nil;
+                [self setNeedsDisplay];
+    
+                success = YES;
             }
-            _backgroundImage = image;
-            _backgroundImageScaled = nil;
-            _backgroundImageContentMode = mode;
-            _needsFullRedraw = YES;
-            [self setNeedsDisplay];
-
-            return YES;
         }
     }
-    return NO;
+    return success;
 }
 
 - (void)setCanvasText:(NSArray *)aText {
@@ -193,53 +220,55 @@
                                  };
     
     for (NSDictionary *property in aText) {
-        if (property[@"text"]) {
-            NSMutableArray *arr = [@"TextOnSketch" isEqualToString: property[@"overlay"]] ? arrTextOnSketch : arrSketchOnText;
-            CanvasText *text = [CanvasText new];
-            text.text = property[@"text"];
-            UIFont *font = nil;
-            if (property[@"font"]) {
-                font = [UIFont fontWithName: property[@"font"] size: property[@"fontSize"] == nil ? 12 : [property[@"fontSize"] floatValue]];
-                font = font == nil ? [UIFont systemFontOfSize: property[@"fontSize"] == nil ? 12 : [property[@"fontSize"] floatValue]] : font;
-            } else if (property[@"fontSize"]) {
-                font = [UIFont systemFontOfSize: [property[@"fontSize"] floatValue]];
-            } else {
-                font = [UIFont systemFontOfSize: 12];
+        @autoreleasepool {
+            if (property[@"text"]) {
+                NSMutableArray *arr = [@"TextOnSketch" isEqualToString: property[@"overlay"]] ? arrTextOnSketch : arrSketchOnText;
+                CanvasText *text = [CanvasText new];
+                text.text = property[@"text"];
+                UIFont *font = nil;
+                if (property[@"font"]) {
+                    font = [UIFont fontWithName: property[@"font"] size: property[@"fontSize"] == nil ? 12 : [property[@"fontSize"] floatValue]];
+                    font = font == nil ? [UIFont systemFontOfSize: property[@"fontSize"] == nil ? 12 : [property[@"fontSize"] floatValue]] : font;
+                } else if (property[@"fontSize"]) {
+                    font = [UIFont systemFontOfSize: [property[@"fontSize"] floatValue]];
+                } else {
+                    font = [UIFont systemFontOfSize: 12];
+                }
+                text.font = font;
+                text.anchor = property[@"anchor"] == nil ?
+                    CGPointMake(0, 0) :
+                    CGPointMake([property[@"anchor"][@"x"] floatValue], [property[@"anchor"][@"y"] floatValue]);
+                text.position = property[@"position"] == nil ?
+                    CGPointMake(0, 0) :
+                    CGPointMake([property[@"position"][@"x"] floatValue], [property[@"position"][@"y"] floatValue]);
+                long color = property[@"fontColor"] == nil ? 0xFF000000 : [property[@"fontColor"] longValue];
+                UIColor *fontColor =
+                [UIColor colorWithRed:(CGFloat)((color & 0x00FF0000) >> 16) / 0xFF
+                                green:(CGFloat)((color & 0x0000FF00) >> 8) / 0xFF
+                                 blue:(CGFloat)((color & 0x000000FF)) / 0xFF
+                                alpha:(CGFloat)((color & 0xFF000000) >> 24) / 0xFF];
+                NSMutableParagraphStyle *style = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
+                NSString *a = property[@"alignment"] ? property[@"alignment"] : @"Left";
+                style.alignment = [alignments[a] integerValue];
+                style.lineHeightMultiple = property[@"lineHeightMultiple"] ? [property[@"lineHeightMultiple"] floatValue] : 1.0;
+                text.attribute = @{
+                                   NSFontAttributeName:font,
+                                   NSForegroundColorAttributeName:fontColor,
+                                   NSParagraphStyleAttributeName:style
+                                   };
+                text.isAbsoluteCoordinate = ![@"Ratio" isEqualToString:property[@"coordinate"]];
+                CGSize textSize = [text.text sizeWithAttributes:text.attribute];
+                
+                CGPoint position = text.position;
+                if (!text.isAbsoluteCoordinate) {
+                    position.x *= self.bounds.size.width;
+                    position.y *= self.bounds.size.height;
+                }
+                position.x -= textSize.width * text.anchor.x;
+                position.y -= textSize.height * text.anchor.y;
+                text.drawRect = CGRectMake(position.x, position.y, textSize.width, textSize.height);
+                [arr addObject: text];
             }
-            text.font = font;
-            text.anchor = property[@"anchor"] == nil ?
-                CGPointMake(0, 0) :
-                CGPointMake([property[@"anchor"][@"x"] floatValue], [property[@"anchor"][@"y"] floatValue]);
-            text.position = property[@"position"] == nil ?
-                CGPointMake(0, 0) :
-                CGPointMake([property[@"position"][@"x"] floatValue], [property[@"position"][@"y"] floatValue]);
-            long color = property[@"fontColor"] == nil ? 0xFF000000 : [property[@"fontColor"] longValue];
-            UIColor *fontColor =
-            [UIColor colorWithRed:(CGFloat)((color & 0x00FF0000) >> 16) / 0xFF
-                            green:(CGFloat)((color & 0x0000FF00) >> 8) / 0xFF
-                             blue:(CGFloat)((color & 0x000000FF)) / 0xFF
-                            alpha:(CGFloat)((color & 0xFF000000) >> 24) / 0xFF];
-            NSMutableParagraphStyle *style = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
-            NSString *a = property[@"alignment"] ? property[@"alignment"] : @"Left";
-            style.alignment = [alignments[a] integerValue];
-            style.lineHeightMultiple = property[@"lineHeightMultiple"] ? [property[@"lineHeightMultiple"] floatValue] : 1.0;
-            text.attribute = @{
-                               NSFontAttributeName:font,
-                               NSForegroundColorAttributeName:fontColor,
-                               NSParagraphStyleAttributeName:style
-                               };
-            text.isAbsoluteCoordinate = ![@"Ratio" isEqualToString:property[@"coordinate"]];
-            CGSize textSize = [text.text sizeWithAttributes:text.attribute];
-            
-            CGPoint position = text.position;
-            if (!text.isAbsoluteCoordinate) {
-                position.x *= self.bounds.size.width;
-                position.y *= self.bounds.size.height;
-            }
-            position.x -= textSize.width * text.anchor.x;
-            position.y -= textSize.height * text.anchor.y;
-            text.drawRect = CGRectMake(position.x, position.y, textSize.width, textSize.height);
-            [arr addObject: text];
         }
     }
     _arrTextOnSketch = [arrTextOnSketch copy];
@@ -340,7 +369,9 @@
         
         if (includeText) {
             for (CanvasText *text in _arrSketchOnText) {
-                [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                @autoreleasepool {
+                    [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                }
             }
         }
         
@@ -349,7 +380,9 @@
         
         if (includeText) {
             for (CanvasText *text in _arrTextOnSketch) {
-                [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                @autoreleasepool {
+                    [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                }
             }
         }
         
@@ -372,7 +405,9 @@
         
         if (includeText) {
             for (CanvasText *text in _arrSketchOnText) {
-                [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                @autoreleasepool {
+                    [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                }
             }
         }
         
@@ -381,7 +416,9 @@
         
         if (includeText) {
             for (CanvasText *text in _arrTextOnSketch) {
-                [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                @autoreleasepool {
+                    [text.text drawInRect: text.drawRect withAttributes: text.attribute];
+                }
             }
         }
         
@@ -393,33 +430,37 @@
 }
 
 - (void)saveImageOfType:(NSString*) type folder:(NSString*) folder filename:(NSString*) filename withTransparentBackground:(BOOL) transparent includeImage:(BOOL)includeImage includeText:(BOOL)includeText cropToImageSize:(BOOL)cropToImageSize {
-    UIImage *img = [self createImageWithTransparentBackground:transparent includeImage:includeImage includeText:(BOOL)includeText cropToImageSize:cropToImageSize];
+    @autoreleasepool {
+        UIImage *img = [self createImageWithTransparentBackground:transparent includeImage:includeImage includeText:(BOOL)includeText cropToImageSize:cropToImageSize];
+        
+        if (folder != nil && filename != nil) {
+            NSURL *tempDir = [[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent: folder];
+            NSError * error = nil;
+            [[NSFileManager defaultManager] createDirectoryAtPath:[tempDir path]
+                                      withIntermediateDirectories:YES
+                                                       attributes:nil
+                                                            error:&error];
+            if (error == nil) {
+                NSURL *fileURL = [[tempDir URLByAppendingPathComponent: filename] URLByAppendingPathExtension: type];
+                NSData *imageData = [self getImageData:img type:type];
+                [imageData writeToURL:fileURL atomically:YES];
     
-    if (folder != nil && filename != nil) {
-        NSURL *tempDir = [[NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES] URLByAppendingPathComponent: folder];
-        NSError * error = nil;
-        [[NSFileManager defaultManager] createDirectoryAtPath:[tempDir path]
-                                  withIntermediateDirectories:YES
-                                                   attributes:nil
-                                                        error:&error];
-        if (error == nil) {
-            NSURL *fileURL = [[tempDir URLByAppendingPathComponent: filename] URLByAppendingPathExtension: type];
-            NSData *imageData = [self getImageData:img type:type];
-            [imageData writeToURL:fileURL atomically:YES];
-
-            if (_onChange) {
-                _onChange(@{ @"success": @YES, @"path": [fileURL path]});
+                if (_onChange) {
+                    _onChange(@{ @"success": @YES, @"path": [fileURL path]});
+                }
+            } else {
+                if (_onChange) {
+                    _onChange(@{ @"success": @NO, @"path": [NSNull null]});
+                }
             }
+            img = nil;
         } else {
-            if (_onChange) {
-                _onChange(@{ @"success": @NO, @"path": [NSNull null]});
+            if ([type isEqualToString: @"png"]) {
+                img = [UIImage imageWithData: UIImagePNGRepresentation(img)];
             }
+            UIImageWriteToSavedPhotosAlbum(img, self, @selector(image:didFinishSavingWithError:contextInfo:), nil);
+            img=nil;
         }
-    } else {
-        if ([type isEqualToString: @"png"]) {
-            img = [UIImage imageWithData: UIImagePNGRepresentation(img)];
-        }
-        UIImageWriteToSavedPhotosAlbum(img, self, @selector(image:didFinishSavingWithError:contextInfo:), nil);
     }
 }
 
@@ -434,10 +475,13 @@
     
     CGImageRef scaledImage = CGBitmapContextCreateImage(context);
     CGColorSpaceRelease(colorSpace);
+    colorSpace = nil;
     CGContextRelease(context);
+    context = nil;
     
     UIImage *image = [UIImage imageWithCGImage:scaledImage];
     CGImageRelease(scaledImage);
+    scaledImage = nil;
     
     return image;
 }
@@ -445,6 +489,7 @@
 - (NSString*) transferToBase64OfType: (NSString*) type withTransparentBackground: (BOOL) transparent includeImage:(BOOL)includeImage includeText:(BOOL)includeText cropToImageSize:(BOOL)cropToImageSize {
     UIImage *img = [self createImageWithTransparentBackground:transparent includeImage:includeImage includeText:(BOOL)includeText cropToImageSize:cropToImageSize];
     NSData *data = [self getImageData:img type:type];
+    img = nil;
     return [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
 }
 
@@ -461,6 +506,12 @@
 - (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo: (void *) contextInfo {
     if (_onChange) {
         _onChange(@{ @"success": error != nil ? @NO : @YES });
+    }
+    if (image != NULL) {
+        image = nil;
+    }
+    if (contextInfo != NULL) {
+        contextInfo = nil;
     }
 }
 
