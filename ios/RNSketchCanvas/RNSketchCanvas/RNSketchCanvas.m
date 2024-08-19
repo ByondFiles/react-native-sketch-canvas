@@ -203,11 +203,11 @@
                 image = nil;
                 [self setNeedsDisplay];
     
-                success = YES;
+                succes = YES;
             }
         }
     }
-    return success;
+    return succes;
 }
 
 - (void)setCanvasText:(NSArray *)aText {
