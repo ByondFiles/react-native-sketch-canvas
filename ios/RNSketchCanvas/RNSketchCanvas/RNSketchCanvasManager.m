@@ -76,12 +76,16 @@ RCT_EXPORT_METHOD(addPath:(nonnull NSNumber *)reactTag pathId: (int) pathId stro
 {
     NSMutableArray *cgPoints = [[NSMutableArray alloc] initWithCapacity: points.count];
     for (NSString *coor in points) {
-        NSArray *coorInNumber = [coor componentsSeparatedByString: @","];
-        [cgPoints addObject: [NSValue valueWithCGPoint: CGPointMake([coorInNumber[0] floatValue], [coorInNumber[1] floatValue])]];
+        @autoreleasepool {
+            NSArray *coorInNumber = [coor componentsSeparatedByString: @","];
+            [cgPoints addObject: [NSValue valueWithCGPoint: CGPointMake([coorInNumber[0] floatValue], [coorInNumber[1] floatValue])]];
+        }
     }
 
     [self runCanvas:reactTag block:^(RNSketchCanvas *canvas) {
-        [canvas addPath: pathId strokeColor: strokeColor strokeWidth: strokeWidth points: cgPoints];
+        @autoreleasepool {
+            [canvas addPath: pathId strokeColor: strokeColor strokeWidth: strokeWidth points: cgPoints];
+        }
     }];
 }
 
