@@ -84,6 +84,7 @@ export interface SketchCanvasProps {
   onStrokeChanged?: () => void
   onStrokeEnd?: (path: Path) => void
   onSketchSaved?: (result: boolean, path: string) => void
+  onLayout?: () => void
   onPathsChange?: (pathsCount: number) => void
 }
 
@@ -127,6 +128,7 @@ export interface RNSketchCanvasProps {
   onClosePressed?: () => void
   onUndoPressed?: (id: number) => void
   onClearPressed?: () => void
+  onLayout?: () => void
   onPathsChange?: (pathsCount: number) => void
   user?: string
 
