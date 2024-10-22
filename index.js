@@ -20,6 +20,7 @@ export default class RNSketchCanvas extends React.Component {
     onClosePressed: PropTypes.func,
     onUndoPressed: PropTypes.func,
     onClearPressed: PropTypes.func,
+    onLayout: PropTypes.func,
     onPathsChange: PropTypes.func,
     user: PropTypes.string,
 
@@ -76,6 +77,7 @@ export default class RNSketchCanvas extends React.Component {
     onClosePressed: () => {},
     onUndoPressed: () => {},
     onClearPressed: () => {},
+    onLayout: () => {},
     onPathsChange: () => {},
     user: null,
 
@@ -336,6 +338,7 @@ export default class RNSketchCanvas extends React.Component {
               onSketchSaved={(success, path) =>
                   this.props.onSketchSaved(success, path)
               }
+              onLayout={this.props.onLayout}
               onPathsChange={this.props.onPathsChange}
               text={this.props.text}
               localSourceImage={this.props.localSourceImage}
